@@ -27,6 +27,16 @@ const routes = [
                 path: 'my-booking',
                 name: 'MyBooking',
                 component: () => import('../views/MyBooking.vue')
+            },
+            {
+                path: 'admin/course',
+                name: 'AdminCourse',
+                component: () => import('../views/AdminCourse.vue')
+            },
+            {
+                path: 'admin/user',
+                name: 'AdminUser',
+                component: () => import('../views/AdminUser.vue')
             }
 // ...
         ]
