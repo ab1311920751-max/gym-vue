@@ -87,10 +87,15 @@ const handleRegister = async () => {
     return
   }
   try {
-    await request.post('/auth/register', form)
+    // 注意：这里我们只传 username 和 password
+    // 后端会自动设置 balance=0 和 vipType=0
+    await request.post('/auth/register', {
+        username: form.username,
+        password: form.password
+    })
     ElMessage.success('注册成功，请点击登录')
   } catch (e) {
-    // 错误在 request.js 里已经弹窗了，这里不用管
+    console.error(e)
   }
 }
 </script>
