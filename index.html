@@ -4,29 +4,53 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>gym-vue</title>
+    <title>健身房预约系统</title>
+    
+    <script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.1.0-beta.3/libs/cn/index.js"></script>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
-    
-<script src="https://lf-cdn.coze.cn/obj/unpkg/flow-platform/chat-app-sdk/1.2.0-beta.19/libs/cn/index.js"></script>
-<script>
-  new CozeWebSDK.WebChatClient({
-    config: {
-      bot_id: '7603982771019251722',
-    },
-    componentProps: {
-      title: 'Coze',
-    },
-    auth: {
-      type: 'token',
-      token: 'pat_MqFKILo6a26qKg8hlb1wWwr59I6MTR2zrv1hWAxfDyYkwbFapcOOIZyKCQlvXPjs',
-      onRefreshToken: function () {
-        return 'pat_MqFKILo6a26qKg8hlb1wWwr59I6MTR2zrv1hWAxfDyYkwbFapcOOIZyKCQlvXPjs'
-      }
-    }
-  });
-</script>
+
+    <script>
+      // 等待 SDK 加载完毕
+      window.addEventListener('load', () => {
+          if (window.CozeWebSDK) {
+              new CozeWebSDK.WebChatClient({
+                config: {
+                  // 你的 Bot ID
+                  bot_id: '7603982771019251722', 
+                },
+                componentProps: {
+                  // 💡 亮点：自定义标题
+                  title: '🤖 AI 健身私教', 
+                },
+                auth: {
+                  type: 'token',
+                  // 你的 PAT Token (注意：实际生产环境不建议直接暴露在前端，但毕设演示没问题)
+                  token: 'pat_MqFKILo6a26qKg8hlb1wWwr59I6MTR2zrv1hWAxfDyYkwbFapcOOIZyKCQlvXPjs',
+                  onRefreshToken: function () {
+                    return 'pat_MqFKILo6a26qKg8hlb1wWwr59I6MTR2zrv1hWAxfDyYkwbFapcOOIZyKCQlvXPjs'
+                  }
+                },
+                // 💡 进阶配置：定制 UI (可选)
+                ui: {
+                    base: {
+                        icon: 'https://lf-coze-web-cdn.coze.cn/obj/coze-web-cn/obric/coze/favicon.1970.png', // 机器人头像
+                        layout: 'pc', // pc 或 mobile
+                        zIndex: 1000, // 确保在最上层
+                    },
+                    asstBtn: {
+                        isNeed: true, // 显示悬浮按钮
+                    },
+                    footer: {
+                        isShow: true, 
+                        expressionText: 'Power by Coze & Java', // 底部版权文字
+                    }
+                }
+              });
+          }
+      });
+    </script>
   </body>
 </html>
