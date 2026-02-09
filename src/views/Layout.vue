@@ -12,10 +12,9 @@
         <el-menu-item index="/home"><span>🏠 首页大屏</span></el-menu-item>
         <el-menu-item index="/course"><span>📅 课程预约</span></el-menu-item>
         <el-menu-item index="/my-booking"><span>📝 我的订单</span></el-menu-item>
-        
         <el-menu-item index="/wallet"><span>💰 我的钱包</span></el-menu-item>
 
-        <el-sub-menu index="admin">
+        <el-sub-menu index="admin" v-if="user.role === 'admin'">
           <template #title><span>🔧 后台管理</span></template>
           <el-menu-item index="/admin-course">课程管理</el-menu-item>
           <el-menu-item index="/admin-user">用户管理</el-menu-item>
@@ -25,12 +24,14 @@
 
     <div class="main-content">
       <div class="header">
-        <div class="breadcrumb">欢迎使用健身房预约系统</div>
+        <div class="breadcrumb">
+            欢迎，<span style="font-weight: bold">{{ user.role === 'admin' ? '管理员' : '尊贵的会员' }}</span>
+        </div>
         <div class="user-info">
           <span style="margin-right: 15px; color: #F56C6C; font-weight: bold;">
              余额: ￥{{ user.balance ? Number(user.balance).toFixed(2) : '0.00' }}
           </span>
-          <span style="margin-right: 15px">👤 {{ user.username || '用户' }}</span>
+          <span style="margin-right: 15px">👤 {{ user.username }}</span>
           <el-button type="danger" size="small" @click="logout">退出</el-button>
         </div>
       </div>
@@ -44,12 +45,12 @@
 
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import { ref, onMounted } from 'vue' // 引入 onMounted
-import request from '../utils/request' // 引入 request
+import { ref, onMounted } from 'vue'
+import request from '../utils/request'
 
 const router = useRouter()
 const route = useRoute()
-const user = ref({}) // 改为 ref 响应式
+const user = ref({}) 
 
 const logout = () => {
   localStorage.removeItem('user')
@@ -57,19 +58,20 @@ const logout = () => {
   router.push('/login')
 }
 
-// 每次挂载 Layout 时获取最新用户信息，保证右上角余额是最新的
 onMounted(async () => {
     const localStr = localStorage.getItem('user')
     if(localStr) {
         const localUser = JSON.parse(localStr)
         try {
-             // 实时查库
+             // 实时查库获取最新信息（包括 role 和 balance）
              const res = await request.get(`/user/${localUser.id}`)
              if(res.code === '200') {
                  user.value = res.data
+                 // 同步更新本地缓存，确保刷新后权限状态也是新的
+                 localStorage.setItem('user', JSON.stringify(res.data))
              }
         } catch(e) {
-             user.value = localUser // 兜底
+             user.value = localUser
         }
     }
 })

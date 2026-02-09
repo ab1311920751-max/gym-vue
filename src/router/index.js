@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '../views/Layout.vue'
+import { ElMessage } from 'element-plus'
 
 const routes = [
   {
@@ -10,8 +11,6 @@ const routes = [
       { path: 'home', name: 'Home', component: () => import('../views/Home.vue') },
       { path: 'course', name: 'Course', component: () => import('../views/Course.vue') },
       { path: 'my-booking', name: 'MyBooking', component: () => import('../views/MyBooking.vue') },
-      
-      // --- 新增：钱包页面 ---
       { path: 'wallet', name: 'Wallet', component: () => import('../views/Wallet.vue') },
 
       // 管理页面
@@ -27,13 +26,32 @@ const router = createRouter({
   routes
 })
 
+// 🛡️ 路由守卫
 router.beforeEach((to, from, next) => {
-  const user = localStorage.getItem('user')
-  if (to.path !== '/login' && !user) {
-    next('/login')
-  } else {
+  const userStr = localStorage.getItem('user')
+  const user = userStr ? JSON.parse(userStr) : null
+
+  // 1. 白名单：登录页直接放行
+  if (to.path === '/login') {
     next()
+    return
   }
+
+  // 2. 未登录：踢回登录页
+  if (!user) {
+    next('/login')
+    return
+  }
+
+  // 3. 🔒 权限拦截：普通用户试图访问管理员页面
+  if (to.path.startsWith('/admin-') && user.role !== 'admin') {
+    ElMessage.error('无权访问：该页面仅限管理员查看')
+    next('/home') // 强制跳转回首页
+    return
+  }
+
+  // 4. 放行
+  next()
 })
 
 export default router
