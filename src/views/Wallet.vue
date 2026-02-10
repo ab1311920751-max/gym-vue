@@ -53,7 +53,6 @@
                     </div>
                 </el-card>
             </el-col>
-            
             <el-col :span="12">
                 <el-card shadow="hover" class="vip-card" :class="{ 'active': user.vipType === 2 }" style="border: 1px solid #e6a23c;">
                     <div style="text-align: center; padding: 20px;">
@@ -97,16 +96,13 @@ const user = ref({})
 const dialogVisible = ref(false)
 const rechargeAmount = ref(100)
 
-// 刷新用户信息 (从后端取最新余额)
 const loadUser = async () => {
     const localUser = JSON.parse(localStorage.getItem('user') || '{}')
     if (!localUser.id) return
-    
     try {
         const res = await request.get(`/user/${localUser.id}`)
         if (res.code === '200') {
             user.value = res.data
-            // 同步更新本地缓存，防止刷新后数据倒退
             localStorage.setItem('user', JSON.stringify(res.data))
         }
     } catch(e) { console.error(e) }
@@ -122,7 +118,9 @@ const handleRecharge = async () => {
         if (res.code === '200') {
             ElMessage.success(`充值 ${rechargeAmount.value} 元成功！`)
             dialogVisible.value = false
-            loadUser() // 刷新余额
+            loadUser()
+            // 🔥 关键点：充值成功后，通知右上角更新
+            window.dispatchEvent(new Event('refresh-user'))
         } else {
             ElMessage.error(res.msg)
         }
@@ -134,7 +132,7 @@ const handleBuyVip = (type) => {
     const price = type === 1 ? 30 : 300
     if (user.value.balance < price) {
         ElMessage.warning('余额不足，请先充值！')
-        dialogVisible.value = true // 自动打开充值框
+        dialogVisible.value = true
         return
     }
 
@@ -149,8 +147,10 @@ const handleBuyVip = (type) => {
                 vipType: type
             })
             if (res.code === '200') {
-                ElMessage.success('恭喜你，尊贵的 VIP 身份已生效！')
+                ElMessage.success('VIP 身份已生效！')
                 loadUser()
+                // 🔥 关键点：升级成功后，通知右上角更新
+                window.dispatchEvent(new Event('refresh-user'))
             } else {
                 ElMessage.error(res.msg)
             }
@@ -162,15 +162,7 @@ onMounted(() => loadUser())
 </script>
 
 <style scoped>
-.vip-card {
-    transition: transform 0.3s;
-    cursor: pointer;
-}
-.vip-card:hover {
-    transform: translateY(-5px);
-}
-.active {
-    border: 2px solid #67C23A;
-    background-color: #f0f9eb;
-}
+.vip-card { transition: transform 0.3s; cursor: pointer; }
+.vip-card:hover { transform: translateY(-5px); }
+.active { border: 2px solid #67C23A; background-color: #f0f9eb; }
 </style>

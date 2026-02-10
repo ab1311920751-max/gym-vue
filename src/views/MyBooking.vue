@@ -47,7 +47,6 @@
               @click="handlePay(scope.row.id)">
               立即支付
             </el-button>
-            
             <el-button 
               v-if="scope.row.status === 1" 
               type="info" 
@@ -75,7 +74,6 @@ const load = async () => {
   const user = JSON.parse(userStr)
 
   try {
-    // 调用刚才写的后端接口 /booking/my
     const res = await request.get('/booking/my', {
         params: { userId: user.id }
     })
@@ -87,9 +85,17 @@ const load = async () => {
 
 const handlePay = async (id) => {
     try {
-        await request.post(`/booking/pay/${id}`)
-        ElMessage.success('支付成功！')
-        load() // 刷新列表
+        const res = await request.post(`/booking/pay/${id}`)
+        if (res.code === '200') {
+            ElMessage.success('支付成功！')
+            load()
+            // 🔥 支付成功，余额减少，通知右上角更新
+            window.dispatchEvent(new Event('refresh-user'))
+        } else {
+            // 如果后端报错（比如余额不足），request.js 会拦截，这里不用处理
+            // 但如果到了这里，说明 code != 200
+            ElMessage.error(res.msg)
+        }
     } catch(e) { console.error(e) }
 }
 
@@ -100,9 +106,13 @@ const handleCancel = (id) => {
         type: 'warning'
     }).then(async () => {
         try {
-            await request.post(`/booking/cancel/${id}`)
-            ElMessage.success('已取消预约')
-            load()
+            const res = await request.post(`/booking/cancel/${id}`)
+            if (res.code === '200') {
+                ElMessage.success('已取消预约，资金已退回')
+                load()
+                // 🔥 取消成功，余额增加，通知右上角更新
+                window.dispatchEvent(new Event('refresh-user'))
+            }
         } catch(e) { console.error(e) }
     })
 }

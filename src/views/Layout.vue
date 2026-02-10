@@ -45,12 +45,12 @@
 
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import request from '../utils/request'
 
 const router = useRouter()
 const route = useRoute()
-const user = ref({}) 
+const user = ref({})
 
 const logout = () => {
   localStorage.removeItem('user')
@@ -58,22 +58,33 @@ const logout = () => {
   router.push('/login')
 }
 
-onMounted(async () => {
+// 核心逻辑：获取最新用户信息
+const loadUser = async () => {
     const localStr = localStorage.getItem('user')
     if(localStr) {
         const localUser = JSON.parse(localStr)
         try {
-             // 实时查库获取最新信息（包括 role 和 balance）
              const res = await request.get(`/user/${localUser.id}`)
              if(res.code === '200') {
                  user.value = res.data
-                 // 同步更新本地缓存，确保刷新后权限状态也是新的
                  localStorage.setItem('user', JSON.stringify(res.data))
              }
         } catch(e) {
              user.value = localUser
         }
     }
+}
+
+onMounted(() => {
+    loadUser()
+    // 🔥 监听自定义事件 'refresh-user'
+    // 当 Wallet 或 MyBooking 发生资金变动时，会触发这个事件
+    window.addEventListener('refresh-user', loadUser)
+})
+
+onUnmounted(() => {
+    // 组件销毁时移除监听，防止内存泄漏
+    window.removeEventListener('refresh-user', loadUser)
 })
 </script>
 
