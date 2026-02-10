@@ -12,7 +12,12 @@ const routes = [
       { path: 'course', name: 'Course', component: () => import('../views/Course.vue') },
       { path: 'my-booking', name: 'MyBooking', component: () => import('../views/MyBooking.vue') },
       { path: 'wallet', name: 'Wallet', component: () => import('../views/Wallet.vue') },
-
+      {
+      path: '/pay/success',
+      name: 'PaySuccess',
+      component: () => import('../views/PaySuccess.vue'),
+      meta: { title: '支付结果' }
+  },
       // 管理页面
       { path: 'admin-course', name: 'AdminCourse', component: () => import('../views/AdminCourse.vue') },
       { path: 'admin-user', name: 'AdminUser', component: () => import('../views/AdminUser.vue') }

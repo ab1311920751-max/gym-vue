@@ -38,15 +38,25 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="150">
+        <el-table-column label="操作" width="200">
           <template #default="scope">
-            <el-button 
-              v-if="scope.row.status === 0" 
-              type="danger" 
-              size="small" 
-              @click="handlePay(scope.row.id)">
-              立即支付
-            </el-button>
+            <div v-if="scope.row.status === 0">
+                <el-button 
+                  type="success" 
+                  size="small" 
+                  @click="handlePay(scope.row.id)">
+                  余额
+                </el-button>
+                
+                <el-button 
+                  type="primary" 
+                  plain
+                  size="small" 
+                  @click="handleAlipay(scope.row.bookingNo)">
+                  支付宝
+                </el-button>
+            </div>
+
             <el-button 
               v-if="scope.row.status === 1" 
               type="info" 
@@ -83,20 +93,26 @@ const load = async () => {
   } catch(e) { console.error(e) }
 }
 
+// 余额支付逻辑
 const handlePay = async (id) => {
     try {
         const res = await request.post(`/booking/pay/${id}`)
         if (res.code === '200') {
-            ElMessage.success('支付成功！')
+            ElMessage.success('余额支付成功！')
             load()
             // 🔥 支付成功，余额减少，通知右上角更新
             window.dispatchEvent(new Event('refresh-user'))
         } else {
-            // 如果后端报错（比如余额不足），request.js 会拦截，这里不用处理
-            // 但如果到了这里，说明 code != 200
-            ElMessage.error(res.msg)
+            ElMessage.error(res.msg || '支付失败')
         }
     } catch(e) { console.error(e) }
+}
+
+// 🔥 新增：支付宝支付逻辑
+const handleAlipay = (bookingNo) => {
+    // 直接跳转后端接口，后端返回 HTML Form 自动提交到支付宝沙箱
+    // 这里的 localhost:8080 需要和 application.yml 里的端口一致
+    window.location.href = `http://localhost:8080/alipay/pay?bookingNo=${bookingNo}`
 }
 
 const handleCancel = (id) => {
@@ -112,6 +128,8 @@ const handleCancel = (id) => {
                 load()
                 // 🔥 取消成功，余额增加，通知右上角更新
                 window.dispatchEvent(new Event('refresh-user'))
+            } else {
+                ElMessage.error(res.msg)
             }
         } catch(e) { console.error(e) }
     })
