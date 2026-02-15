@@ -2,7 +2,7 @@
   <div>
     <div style="margin-bottom: 20px">
       <h2 style="margin: 0">👤 用户管理</h2>
-      <p style="color: #999; font-size: 14px">管理员可以在此修改用户余额、会员等级和角色</p>
+      <p style="color: #999; font-size: 14px">管理员可以在此修改用户余额、会员等级，并查看会员有效期</p>
     </div>
 
     <el-card>
@@ -12,13 +12,13 @@
       </div>
 
       <el-table :data="filteredData" stripe style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="username" label="用户名" width="150" />
+        <el-table-column prop="id" label="ID" width="60" />
+        <el-table-column prop="username" label="用户名" width="120" />
         
-        <el-table-column prop="role" label="角色" width="120">
+        <el-table-column prop="role" label="角色" width="100">
             <template #default="scope">
                 <el-tag :type="scope.row.role === 'admin' ? 'danger' : 'primary'">
-                    {{ scope.row.role === 'admin' ? '管理员' : '普通用户' }}
+                    {{ scope.row.role === 'admin' ? '管理员' : '用户' }}
                 </el-tag>
             </template>
         </el-table-column>
@@ -29,15 +29,31 @@
             </template>
         </el-table-column>
 
-        <el-table-column prop="vipType" label="会员等级" width="120">
+        <el-table-column label="会员等级" width="120">
             <template #default="scope">
                 <el-tag v-if="scope.row.vipType === 2" type="warning" effect="dark">年卡 VIP</el-tag>
-                <el-tag v-else-if="scope.row.vipType === 1" type="success" effect="dark">月卡 VIP</el-tag>
+                <el-table v-else-if="scope.row.vipType === 1" type="success" effect="dark">月卡 VIP</el-table>
+                <el-tag v-else-if="scope.row.vipType === 1" type="primary">月卡 VIP</el-tag>
                 <el-tag v-else type="info">普通会员</el-tag>
             </template>
         </el-table-column>
+
+        <!-- ✨ 新增：VIP 到期时间列 -->
+        <el-table-column label="VIP 到期时间" width="200">
+            <template #default="scope">
+                <div v-if="scope.row.vipType > 0">
+                    <i class="el-icon-timer"></i>
+                    {{ formatTime(scope.row.vipExpireTime) }}
+                </div>
+                <div v-else style="color: #ccc">--</div>
+            </template>
+        </el-table-column>
         
-        <el-table-column prop="createTime" label="注册时间" width="180" />
+        <el-table-column prop="createTime" label="注册时间" width="180">
+             <template #default="scope">
+                 {{ formatTime(scope.row.createTime) }}
+             </template>
+        </el-table-column>
 
         <el-table-column label="操作" min-width="180">
           <template #default="scope">
@@ -72,6 +88,9 @@
                <el-option label="月卡 VIP" :value="1" />
                <el-option label="年卡 VIP" :value="2" />
            </el-select>
+           <div style="font-size: 12px; color: #999; line-height: 1.2; margin-top: 5px">
+               注意：在此处直接修改等级不会自动更新到期时间。<br>建议让用户在前台通过支付开通。
+           </div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -88,13 +107,13 @@
 import { ref, onMounted, computed } from 'vue'
 import request from '../utils/request'
 import { ElMessage } from 'element-plus'
+import dayjs from 'dayjs'
 
 const tableData = ref([])
 const searchText = ref('')
 const dialogVisible = ref(false)
 const form = ref({})
 
-// 加载数据：调用我们刚才修复的 /user/list 接口
 const load = async () => {
   const res = await request.get('/user/list')
   if (res.code === '200') {
@@ -102,24 +121,24 @@ const load = async () => {
   }
 }
 
-// 前端过滤搜索（简单实现）
 const filteredData = computed(() => {
     if (!searchText.value) return tableData.value
     return tableData.value.filter(u => u.username.includes(searchText.value))
 })
 
 const handleEdit = (row) => {
-  // 深拷贝，防止直接修改表格数据
   form.value = JSON.parse(JSON.stringify(row))
   dialogVisible.value = true
 }
 
 const save = async () => {
   try {
+      // 这里的接口是 put /user，后端接收的是实体类 SysUser
+      // 所以即使 DTO 变了，这个管理员接口依然兼容
       await request.put('/user', form.value)
       ElMessage.success('更新成功')
       dialogVisible.value = false
-      load() // 刷新列表
+      load() 
   } catch(e) { console.error(e) }
 }
 
@@ -129,6 +148,11 @@ const handleDelete = async (id) => {
       ElMessage.success('删除成功')
       load()
   } catch(e) { console.error(e) }
+}
+
+const formatTime = (val) => {
+    if (!val) return ''
+    return dayjs(val).format('YYYY-MM-DD HH:mm')
 }
 
 onMounted(() => load())

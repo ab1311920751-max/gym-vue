@@ -4,11 +4,27 @@
       <el-col :span="8">
          <el-card shadow="hover">
             <template #header><span>👤 用户档案</span></template>
-            <div style="display: flex; align-items: center; gap: 10px;">
-               <h3 style="margin: 0">{{ user.username }}</h3>
-               <el-tag v-if="user.vipType === 0" type="info">普通会员</el-tag>
-               <el-tag v-else-if="user.vipType === 1" type="primary">月卡 VIP</el-tag>
-               <el-tag v-else-if="user.vipType === 2" type="warning">👑 年卡 VIP</el-tag>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+               <div style="display: flex; align-items: center; gap: 10px;">
+                   <h3 style="margin: 0">{{ user.username }}</h3>
+                   <el-tag v-if="user.vipType === 0" type="info">普通会员</el-tag>
+                   <el-tag v-else-if="user.vipType === 1" type="primary">月卡 VIP</el-tag>
+                   <el-tag v-else-if="user.vipType === 2" type="warning">👑 年卡 VIP</el-tag>
+               </div>
+               
+               <!-- ✨ 新增：VIP 有效期展示 -->
+               <div v-if="user.vipType > 0" style="font-size: 13px; color: #666; background: #f4f4f5; padding: 10px; border-radius: 4px;">
+                   <span style="font-weight: bold;">📅 到期时间：</span>
+                   <span :style="{ color: isExpiringSoon(user.vipExpireTime) ? 'red' : '#333' }">
+                       {{ formatDate(user.vipExpireTime) }}
+                   </span>
+                   <div v-if="isExpiringSoon(user.vipExpireTime)" style="margin-top: 5px; color: red; font-size: 12px;">
+                       (即将过期，请及时续费)
+                   </div>
+               </div>
+               <div v-else style="font-size: 13px; color: #999;">
+                   暂未开通 VIP，享受 9 折/ 8 折购课优惠
+               </div>
             </div>
          </el-card>
       </el-col>
@@ -29,14 +45,22 @@
     </el-row>
 
     <div style="margin-top: 30px">
-        <h3>👑 会员专区</h3>
+        <h3>👑 会员专区 (支持续费叠加)</h3>
         <el-row :gutter="20">
             <el-col :span="12">
                 <el-card shadow="hover" class="vip-card" :class="{ 'active': user.vipType === 1 }">
                     <div style="text-align: center; padding: 20px;">
                         <h2 style="color: #409EFF">🗓️ 月卡 VIP</h2>
-                        <h1 style="color: #303133">￥30.00</h1>
-                        <el-button type="primary" plain :disabled="user.vipType >= 1" @click="handleBuyVip(1)">立即开通</el-button>
+                        <h1 style="color: #303133">￥30.00 <span style="font-size: 14px; color: #999; font-weight: normal">/ 月</span></h1>
+                        <ul style="text-align: left; color: #666; font-size: 14px; margin: 15px 0;">
+                            <li>全场课程 9 折优惠</li>
+                            <li>专属 VIP 标识</li>
+                            <li>优先抢课通道</li>
+                        </ul>
+                        <!-- 逻辑变更：现在允许续费，所以去掉了 disabled -->
+                        <el-button type="primary" plain @click="handleBuyVip(1)">
+                            {{ user.vipType === 1 ? '立即续费 (+30天)' : '立即开通' }}
+                        </el-button>
                     </div>
                 </el-card>
             </el-col>
@@ -44,14 +68,22 @@
                 <el-card shadow="hover" class="vip-card" :class="{ 'active': user.vipType === 2 }" style="border: 1px solid #e6a23c;">
                     <div style="text-align: center; padding: 20px;">
                         <h2 style="color: #E6A23C">🏆 年卡 VIP</h2>
-                        <h1 style="color: #303133">￥300.00</h1>
-                        <el-button type="warning" effect="dark" :disabled="user.vipType === 2" @click="handleBuyVip(2)">立即开通</el-button>
+                        <h1 style="color: #303133">￥300.00 <span style="font-size: 14px; color: #999; font-weight: normal">/ 年</span></h1>
+                         <ul style="text-align: left; color: #666; font-size: 14px; margin: 15px 0;">
+                            <li>全场课程 8 折钜惠</li>
+                            <li>尊贵皇冠标识</li>
+                            <li>所有月卡权益</li>
+                        </ul>
+                        <el-button type="warning" effect="dark" @click="handleBuyVip(2)">
+                             {{ user.vipType === 2 ? '立即续费 (+365天)' : '升级/开通' }}
+                        </el-button>
                     </div>
                 </el-card>
             </el-col>
         </el-row>
     </div>
 
+    <!-- 充值弹窗保持不变 -->
     <el-dialog v-model="dialogVisible" title="💰 支付宝充值" width="30%">
         <div style="text-align: center; margin: 20px 0;">
             <el-input-number v-model="rechargeAmount" :min="10" :step="100" size="large" />
@@ -75,12 +107,27 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '../utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import dayjs from 'dayjs' // 引入时间处理库
 
 const route = useRoute()
 const router = useRouter()
 const user = ref({})
 const dialogVisible = ref(false)
 const rechargeAmount = ref(100)
+
+// 时间格式化工具
+const formatDate = (dateStr) => {
+    if (!dateStr) return '永久有效'
+    return dayjs(dateStr).format('YYYY年MM月DD日 HH:mm:ss 到期')
+}
+
+// 判断是否即将过期 (7天内)
+const isExpiringSoon = (dateStr) => {
+    if (!dateStr) return false
+    const expireTime = dayjs(dateStr)
+    const now = dayjs()
+    return expireTime.diff(now, 'day') <= 7 && expireTime.isAfter(now)
+}
 
 const loadUser = async () => {
     const localUser = JSON.parse(localStorage.getItem('user') || '{}')
@@ -89,17 +136,15 @@ const loadUser = async () => {
         const res = await request.get(`/user/${localUser.id}`)
         if (res.code === '200') {
             user.value = res.data
+            // 更新本地缓存
             localStorage.setItem('user', JSON.stringify(res.data))
         }
     } catch(e) {}
 }
 
-// 1. 发起支付宝支付
 const handleAlipay = () => {
-    // 生成一个带时间戳的唯一订单号
     const traceNo = Date.now() + Math.floor(Math.random() * 1000)
-    // 拼接后端支付接口地址
-    // 注意：这里用 window.open 打开新窗口，避免当前页面被覆盖
+    // 这里如果端口不是 8080，请修改
     const payUrl = `http://localhost:8080/alipay/pay?subject=健身房充值&traceNo=${traceNo}&totalAmount=${rechargeAmount.value}`
     
     window.open(payUrl, '_blank')
@@ -109,8 +154,6 @@ const handleAlipay = () => {
         cancelButtonText: '遇到问题',
         type: 'success'
     }).then(() => {
-        // 其实用户点确认时，如果回调还没跑完，可能查不到钱
-        // 但我们在 onMounted 里处理了自动回调，这里只是兜底
         loadUser()
         window.dispatchEvent(new Event('refresh-user'))
     })
@@ -118,33 +161,28 @@ const handleAlipay = () => {
     dialogVisible.value = false
 }
 
-// 2. 检查支付回调
-// 当支付宝跳回 http://localhost:5173/wallet?pay=success&... 时触发
 const checkPayCallback = async () => {
     if (route.query.pay === 'success') {
         const out_trade_no = route.query.out_trade_no
         const total_amount = route.query.total_amount
         
-        // 调用后端接口确认加钱
         try {
             const res = await request.post('/alipay/success', {
                 out_trade_no: out_trade_no,
                 total_amount: total_amount,
-                userId: user.value.id // 必须传 userId
+                userId: user.value.id
             })
-            if (res === 'success') {
+            if (res.code === '200') {
                 ElMessage.success(`充值 ${total_amount} 元到账成功！`)
                 loadUser()
                 window.dispatchEvent(new Event('refresh-user'))
-                
-                // 清除 URL 参数，防止刷新重复加钱 (虽然可以用订单号幂等性控制，简单起见先清URL)
                 router.replace('/wallet')
             }
         } catch(e) { console.error(e) }
     }
 }
 
-// 购买 VIP 逻辑 (保持不变)
+// 购买/续费 VIP
 const handleBuyVip = (type) => {
     const price = type === 1 ? 30 : 300
     if (user.value.balance < price) {
@@ -152,26 +190,58 @@ const handleBuyVip = (type) => {
         dialogVisible.value = true
         return
     }
-    ElMessageBox.confirm(`确认花费 ${price} 元开通吗？`, '提示', { confirmButtonText: '确定', cancelButtonText: '取消' })
+    
+    const actionText = user.value.vipType === type ? '续费' : '开通'
+    
+    ElMessageBox.confirm(`确认花费 ${price} 元${actionText}吗？`, '提示', { 
+        confirmButtonText: '确定扣款', 
+        cancelButtonText: '取消',
+        type: 'warning'
+    })
     .then(async () => {
+        // 这里的参数结构 { userId, vipType } 完美匹配后端的 UserDTO
         await request.post('/user/buyVip', { userId: user.value.id, vipType: type })
-        ElMessage.success('开通成功')
+        ElMessage.success(`${actionText}成功！`)
         loadUser()
         window.dispatchEvent(new Event('refresh-user'))
     })
 }
 
 onMounted(async () => {
-    // 先加载用户，拿到 userId
     const localUser = JSON.parse(localStorage.getItem('user') || '{}')
     user.value = localUser
     
-    // 检查是否刚从支付宝跳回来
     if (route.query.pay === 'success' && localUser.id) {
         await checkPayCallback()
     }
-    
-    // 再刷一次最新余额
     loadUser()
 })
 </script>
+
+<style scoped>
+.vip-card {
+    transition: all 0.3s;
+    border: 1px solid #EBEEF5;
+    cursor: pointer;
+}
+.vip-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+.vip-card.active {
+    background-color: #f0f9eb;
+    border-color: #67c23a;
+    position: relative;
+}
+.vip-card.active::after {
+    content: '当前等级';
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #67c23a;
+    color: white;
+    padding: 2px 8px;
+    font-size: 12px;
+    border-bottom-left-radius: 8px;
+}
+</style>
