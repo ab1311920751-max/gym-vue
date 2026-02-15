@@ -38,14 +38,14 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="200">
+        <el-table-column label="操作" width="220">
           <template #default="scope">
             <div v-if="scope.row.status === 0">
                 <el-button 
                   type="success" 
                   size="small" 
                   @click="handlePay(scope.row.id)">
-                  余额
+                  余额支付
                 </el-button>
                 
                 <el-button 
@@ -55,15 +55,28 @@
                   @click="handleAlipay(scope.row.bookingNo)">
                   支付宝
                 </el-button>
+                
+                 <!-- 待支付也可以取消 -->
+                 <el-button 
+                  type="text" 
+                  size="small" 
+                  style="color: #909399; margin-left: 5px"
+                  @click="handleCancel(scope.row.id)">
+                  取消
+                </el-button>
             </div>
 
-            <el-button 
-              v-if="scope.row.status === 1" 
-              type="info" 
-              size="small" 
-              @click="handleCancel(scope.row.id)">
-              取消
-            </el-button>
+            <div v-else-if="scope.row.status === 1">
+                <el-button 
+                  type="danger" 
+                  plain
+                  size="small" 
+                  @click="handleCancel(scope.row.id)">
+                  取消预约
+                </el-button>
+            </div>
+            
+             <span v-else style="color: #ccc; font-size: 12px">不可操作</span>
           </template>
         </el-table-column>
       </el-table>
@@ -84,6 +97,7 @@ const load = async () => {
   const user = JSON.parse(userStr)
 
   try {
+    // 后端接口：/booking/my?userId=xxx
     const res = await request.get('/booking/my', {
         params: { userId: user.id }
     })
@@ -93,43 +107,36 @@ const load = async () => {
   } catch(e) { console.error(e) }
 }
 
-// 余额支付逻辑
+// 余额支付
 const handlePay = async (id) => {
     try {
         const res = await request.post(`/booking/pay/${id}`)
         if (res.code === '200') {
             ElMessage.success('余额支付成功！')
             load()
-            // 🔥 支付成功，余额减少，通知右上角更新
             window.dispatchEvent(new Event('refresh-user'))
-        } else {
-            ElMessage.error(res.msg || '支付失败')
         }
     } catch(e) { console.error(e) }
 }
 
-// 🔥 新增：支付宝支付逻辑
+// 支付宝支付
 const handleAlipay = (bookingNo) => {
-    // 直接跳转后端接口，后端返回 HTML Form 自动提交到支付宝沙箱
-    // 这里的 localhost:8080 需要和 application.yml 里的端口一致
     window.location.href = `http://localhost:8080/alipay/pay?bookingNo=${bookingNo}`
 }
 
+// 取消预约 (兼容 待支付取消 和 已预约退款)
 const handleCancel = (id) => {
-    ElMessageBox.confirm('确定要取消这节课吗？退款将原路返回。', '提示', {
-        confirmButtonText: '确定取消',
+    ElMessageBox.confirm('确定要取消/退订吗？', '提示', {
+        confirmButtonText: '确定',
         cancelButtonText: '再想想',
         type: 'warning'
     }).then(async () => {
         try {
             const res = await request.post(`/booking/cancel/${id}`)
             if (res.code === '200') {
-                ElMessage.success('已取消预约，资金已退回')
+                ElMessage.success('操作成功')
                 load()
-                // 🔥 取消成功，余额增加，通知右上角更新
                 window.dispatchEvent(new Event('refresh-user'))
-            } else {
-                ElMessage.error(res.msg)
             }
         } catch(e) { console.error(e) }
     })
