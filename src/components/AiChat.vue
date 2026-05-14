@@ -62,7 +62,7 @@
 
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
-import request from '../utils/request'
+import { aiApi } from '../api'
 
 const visible = ref(false)
 const input = ref('')
@@ -114,8 +114,7 @@ const sendMessage = async () => {
         const userStr = localStorage.getItem('user')
         const user = userStr ? JSON.parse(userStr) : {}
         
-        // 3. 调用后端 API
-        const res = await request.post('/ai/chat', {
+        const res = await aiApi.chat({
             userId: user.id, 
             message: text
         })

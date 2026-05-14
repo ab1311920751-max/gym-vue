@@ -21,7 +21,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import request from '@/utils/request'
+import request from '../utils/request'
 import { CircleCheckFilled, CircleCloseFilled, Loading } from '@element-plus/icons-vue'
 
 const route = useRoute()

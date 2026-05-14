@@ -73,7 +73,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '../utils/request'
+import { courseApi } from '../api'
 import { ElMessage } from 'element-plus'
 
 const tableData = ref([])
@@ -81,7 +81,7 @@ const dialogVisible = ref(false)
 const form = ref({})
 
 const load = async () => {
-  const res = await request.get('/course/list')
+  const res = await courseApi.list()
   if (res.code === '200') {
     tableData.value = res.data
   }
@@ -89,7 +89,7 @@ const load = async () => {
 
 const handleAdd = () => {
   dialogVisible.value = true
-  form.value = { stock: 10, price: 0 } // 默认值
+  form.value = { stock: 10, price: 0 }
 }
 
 const handleEdit = (row) => {
@@ -98,18 +98,17 @@ const handleEdit = (row) => {
 }
 
 const handleDelete = async (id) => {
-  await request.delete(`/course/${id}`)
+  await courseApi.delete(id)
   ElMessage.success('删除成功')
   load()
 }
 
 const save = async () => {
   try {
-    // 根据是否有ID判断是新增还是修改
     if (form.value.id) {
-        await request.put('/course', form.value)
+        await courseApi.update(form.value)
     } else {
-        await request.post('/course', form.value)
+        await courseApi.save(form.value)
     }
     ElMessage.success('保存成功')
     dialogVisible.value = false

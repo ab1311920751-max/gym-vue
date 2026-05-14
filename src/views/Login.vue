@@ -32,26 +32,23 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import request from '../utils/request' // 引入刚才写的工具
+import { authApi } from '../api'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const loading = ref(false)
 
-// 表单数据
 const form = reactive({
   username: '',
   password: ''
 })
 
-// 验证规则
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
-// 登录逻辑
 const handleLogin = async () => {
   if(!form.username || !form.password) {
     ElMessage.warning('请填写完整信息')
@@ -60,19 +57,11 @@ const handleLogin = async () => {
 
   loading.value = true
   try {
-    // 发送请求给后端
-    const res = await request.post('/auth/login', form)
-    
-    // 登录成功
+    const res = await authApi.login({ username: form.username, password: form.password })
     ElMessage.success('登录成功')
-    
-    // 1. 保存用户信息和Token到浏览器
     localStorage.setItem('token', res.data.token)
     localStorage.setItem('user', JSON.stringify(res.data.user))
-    
-    // 2. 跳转到首页 (后面我们会写首页)
     router.push('/') 
-    
   } catch (e) {
     console.error(e)
   } finally {
@@ -80,19 +69,13 @@ const handleLogin = async () => {
   }
 }
 
-// 注册逻辑 (简单复用登录接口，毕设偷懒写法)
 const handleRegister = async () => {
    if(!form.username || !form.password) {
     ElMessage.warning('注册也要填账号密码哦')
     return
   }
   try {
-    // 注意：这里我们只传 username 和 password
-    // 后端会自动设置 balance=0 和 vipType=0
-    await request.post('/auth/register', {
-        username: form.username,
-        password: form.password
-    })
+    await authApi.register({ username: form.username, password: form.password })
     ElMessage.success('注册成功，请点击登录')
   } catch (e) {
     console.error(e)
@@ -106,7 +89,7 @@ const handleRegister = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* 骚气的渐变紫 */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .login-box {

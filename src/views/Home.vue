@@ -74,15 +74,14 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from 'vue'
-import request from '../utils/request'
+import { reportApi } from '../api'
 import * as echarts from 'echarts'
 
 const report = ref({})
 
-// 加载数据
 const loadData = async () => {
   try {
-    const res = await request.get('/report/dashboard')
+    const res = await reportApi.dashboard()
     if (res.code === '200') {
       report.value = res.data
       // 确保 DOM 渲染完后再画图

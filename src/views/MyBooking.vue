@@ -32,15 +32,15 @@
 
         <el-table-column prop="status" label="状态" width="100">
           <template #default="scope">
-            <el-tag v-if="scope.row.status === 0" type="warning">待支付</el-tag>
-            <el-tag v-else-if="scope.row.status === 1" type="success">已预约</el-tag>
-            <el-tag v-else-if="scope.row.status === 2" type="info">已取消</el-tag>
+            <el-tag v-if="scope.row.status === BOOKING_STATUS.PENDING" type="warning">待支付</el-tag>
+            <el-tag v-else-if="scope.row.status === BOOKING_STATUS.PAID" type="success">已预约</el-tag>
+            <el-tag v-else-if="scope.row.status === BOOKING_STATUS.CANCELLED" type="info">已取消</el-tag>
           </template>
         </el-table-column>
 
         <el-table-column label="操作" width="220">
           <template #default="scope">
-            <div v-if="scope.row.status === 0">
+            <div v-if="scope.row.status === BOOKING_STATUS.PENDING">
                 <el-button 
                   type="success" 
                   size="small" 
@@ -56,7 +56,6 @@
                   支付宝
                 </el-button>
                 
-                 <!-- 待支付也可以取消 -->
                  <el-button 
                   type="text" 
                   size="small" 
@@ -66,7 +65,7 @@
                 </el-button>
             </div>
 
-            <div v-else-if="scope.row.status === 1">
+            <div v-else-if="scope.row.status === BOOKING_STATUS.PAID">
                 <el-button 
                   type="danger" 
                   plain
@@ -86,7 +85,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '../utils/request'
+import { bookingApi } from '../api'
+import { BOOKING_STATUS } from '../constants'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const tableData = ref([])
@@ -97,20 +97,16 @@ const load = async () => {
   const user = JSON.parse(userStr)
 
   try {
-    // 后端接口：/booking/my?userId=xxx
-    const res = await request.get('/booking/my', {
-        params: { userId: user.id }
-    })
+    const res = await bookingApi.my({ userId: user.id })
     if (res.code === '200') {
         tableData.value = res.data
     }
   } catch(e) { console.error(e) }
 }
 
-// 余额支付
 const handlePay = async (id) => {
     try {
-        const res = await request.post(`/booking/pay/${id}`)
+        const res = await bookingApi.pay(id)
         if (res.code === '200') {
             ElMessage.success('余额支付成功！')
             load()
@@ -119,12 +115,10 @@ const handlePay = async (id) => {
     } catch(e) { console.error(e) }
 }
 
-// 支付宝支付
 const handleAlipay = (bookingNo) => {
     window.location.href = `http://localhost:8080/alipay/pay?bookingNo=${bookingNo}`
 }
 
-// 取消预约 (兼容 待支付取消 和 已预约退款)
 const handleCancel = (id) => {
     ElMessageBox.confirm('确定要取消/退订吗？', '提示', {
         confirmButtonText: '确定',
@@ -132,7 +126,7 @@ const handleCancel = (id) => {
         type: 'warning'
     }).then(async () => {
         try {
-            const res = await request.post(`/booking/cancel/${id}`)
+            const res = await bookingApi.cancel(id)
             if (res.code === '200') {
                 ElMessage.success('操作成功')
                 load()

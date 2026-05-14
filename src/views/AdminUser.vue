@@ -105,7 +105,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import request from '../utils/request'
+import { userApi } from '../api'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 
@@ -115,7 +115,7 @@ const dialogVisible = ref(false)
 const form = ref({})
 
 const load = async () => {
-  const res = await request.get('/user/list')
+  const res = await userApi.list()
   if (res.code === '200') {
     tableData.value = res.data
   }
@@ -133,9 +133,7 @@ const handleEdit = (row) => {
 
 const save = async () => {
   try {
-      // 这里的接口是 put /user，后端接收的是实体类 SysUser
-      // 所以即使 DTO 变了，这个管理员接口依然兼容
-      await request.put('/user', form.value)
+      await userApi.update(form.value)
       ElMessage.success('更新成功')
       dialogVisible.value = false
       load() 
@@ -144,7 +142,7 @@ const save = async () => {
 
 const handleDelete = async (id) => {
   try {
-      await request.delete(`/user/${id}`)
+      await userApi.delete(id)
       ElMessage.success('删除成功')
       load()
   } catch(e) { console.error(e) }
