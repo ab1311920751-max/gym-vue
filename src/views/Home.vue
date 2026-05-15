@@ -1,71 +1,63 @@
 <template>
   <div class="dashboard-container">
-    <div style="margin-bottom: 20px">
-      <h2 style="margin: 0">📊 运营数据驾驶舱</h2>
-      <p style="color: #909399; font-size: 14px; margin-top: 5px">
-        实时监控系统核心指标，数据每分钟自动刷新
-      </p>
+    <div class="page-header">
+      <h2 class="page-title">运营数据驾驶舱</h2>
+      <p class="page-subtitle">实时监控系统核心指标</p>
     </div>
 
-    <el-row :gutter="20">
-      <el-col :span="6">
-        <el-card shadow="hover" class="data-card">
-          <div class="card-icon" style="background: #fef0f0; color: #f56c6c">💰</div>
-          <div class="card-content">
-            <div class="card-title">总营收</div>
-            <div class="card-num">￥{{ report.totalRevenue || 0 }}</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="data-card">
-          <div class="card-icon" style="background: #ecf5ff; color: #409eff">👥</div>
-          <div class="card-content">
-            <div class="card-title">总用户数</div>
-            <div class="card-num">{{ report.userCount || 0 }} 人</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="data-card">
-          <div class="card-icon" style="background: #f0f9eb; color: #67c23a">📝</div>
-          <div class="card-content">
-            <div class="card-title">订单总量</div>
-            <div class="card-num">{{ report.orderCount || 0 }} 单</div>
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="6">
-        <el-card shadow="hover" class="data-card">
-          <div class="card-icon" style="background: #fdf6ec; color: #e6a23c">🤖</div>
-          <div class="card-content">
-            <div class="card-title">AI 咨询热度</div>
-            <div class="card-num">999+</div>
+    <!-- KPI 卡片 -->
+    <el-row :gutter="20" v-loading="loading">
+      <el-col :xs="24" :sm="12" :md="6" v-for="(item, idx) in kpiList" :key="idx">
+        <el-card shadow="hover" class="kpi-card">
+          <div class="kpi-strip" :style="{ background: item.color }"></div>
+          <div class="kpi-body">
+            <div class="kpi-icon" :style="{ color: item.color }">
+              <el-icon :size="26"><component :is="item.icon" /></el-icon>
+            </div>
+            <div class="kpi-content">
+              <div class="kpi-title">{{ item.title }}</div>
+              <div class="kpi-num">{{ item.value }}</div>
+            </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
-    <el-row :gutter="20" style="margin-top: 30px">
-      <el-col :span="16">
-        <el-card shadow="never">
+    <!-- 会员分布 + 业务概览 -->
+    <el-row :gutter="20" class="chart-row">
+      <el-col :xs="24" :md="14">
+        <el-card shadow="never" class="chart-card">
           <template #header>
             <div class="chart-header">
-              <span>📈 近七日营收趋势 (模拟)</span>
+              <el-icon><PieChart /></el-icon>
+              <span>会员等级分布</span>
             </div>
           </template>
-          <div id="lineChart" style="height: 350px; width: 100%"></div>
+          <div v-if="loading" class="chart-skeleton">
+            <el-skeleton :rows="6" animated />
+          </div>
+          <el-empty
+            v-else-if="!report.vipData || report.vipData.length === 0"
+            description="暂无会员数据"
+          />
+          <div v-else ref="pieRef" class="chart-box"></div>
         </el-card>
       </el-col>
-      
-      <el-col :span="8">
-        <el-card shadow="never">
+
+      <el-col :xs="24" :md="10">
+        <el-card shadow="never" class="chart-card">
           <template #header>
             <div class="chart-header">
-              <span>👑 会员等级分布</span>
+              <el-icon><DataAnalysis /></el-icon>
+              <span>业务概览</span>
             </div>
           </template>
-          <div id="pieChart" style="height: 350px; width: 100%"></div>
+          <div class="summary-list">
+            <div class="summary-row" v-for="row in summaryRows" :key="row.label">
+              <span class="summary-label">{{ row.label }}</span>
+              <span class="summary-value">{{ row.value }}</span>
+            </div>
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -73,144 +65,271 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
-import request from '../utils/request'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, markRaw } from 'vue'
+import {
+  Money,
+  User,
+  Tickets,
+  Medal,
+  PieChart,
+  DataAnalysis
+} from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
+import { getDashboard } from '../api/report'
+import { CHART_COLORS } from '../constants/theme'
 
 const report = ref({})
+const loading = ref(true)
+const pieRef = ref(null)
+let pieInstance = null
 
-// 加载数据
+const kpiList = computed(() => [
+  {
+    title: '总营收',
+    value: `￥${Number(report.value.totalRevenue || 0).toLocaleString()}`,
+    icon: markRaw(Money),
+    color: '#ff7a2f'
+  },
+  {
+    title: '总用户数',
+    value: `${report.value.userCount || 0} 人`,
+    icon: markRaw(User),
+    color: '#409eff'
+  },
+  {
+    title: '订单总量',
+    value: `${report.value.orderCount || 0} 单`,
+    icon: markRaw(Tickets),
+    color: '#67c23a'
+  },
+  {
+    title: 'VIP 用户',
+    value: `${vipUserCount.value} 人`,
+    icon: markRaw(Medal),
+    color: '#e6a23c'
+  }
+])
+
+const vipUserCount = computed(() => {
+  const list = report.value.vipData || []
+  return list
+    .filter((v) => v.name && v.name !== '普通会员')
+    .reduce((sum, v) => sum + (Number(v.value) || 0), 0)
+})
+
+const summaryRows = computed(() => {
+  const total = report.value.userCount || 0
+  const vipRate = total > 0 ? ((vipUserCount.value / total) * 100).toFixed(1) : '0.0'
+  const aov =
+    report.value.orderCount > 0
+      ? (Number(report.value.totalRevenue || 0) / report.value.orderCount).toFixed(2)
+      : '0.00'
+  return [
+    { label: 'VIP 渗透率', value: `${vipRate} %` },
+    { label: '客单价', value: `￥${aov}` },
+    { label: '累计订单', value: `${report.value.orderCount || 0} 单` },
+    { label: '累计营收', value: `￥${Number(report.value.totalRevenue || 0).toLocaleString()}` }
+  ]
+})
+
 const loadData = async () => {
+  loading.value = true
   try {
-    const res = await request.get('/report/dashboard')
-    if (res.code === '200') {
-      report.value = res.data
-      // 确保 DOM 渲染完后再画图
-      nextTick(() => {
-        initCharts(res.data)
-      })
-    }
-  } catch (e) { console.error(e) }
+    const res = await getDashboard()
+    report.value = res.data || {}
+    await nextTick()
+    renderPie()
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
 }
 
-// 初始化图表
-const initCharts = (data) => {
-  // --- 1. 饼图 (真实数据) ---
-  const pieDom = document.getElementById('pieChart')
-  if (pieDom) {
-    const pieChart = echarts.init(pieDom)
-    pieChart.setOption({
-      tooltip: { trigger: 'item' },
-      legend: { bottom: '0%' },
-      series: [
-        {
-          name: '会员分布',
-          type: 'pie',
-          radius: ['40%', '70%'],
-          avoidLabelOverlap: false,
-          itemStyle: {
-            borderRadius: 10,
-            borderColor: '#fff',
-            borderWidth: 2
-          },
-          label: { show: false, position: 'center' },
-          emphasis: {
-            label: { show: true, fontSize: 20, fontWeight: 'bold' }
-          },
-          data: data.vipData || []
-        }
-      ]
-    })
+const renderPie = () => {
+  if (!pieRef.value) return
+  if (pieInstance) {
+    pieInstance.dispose()
   }
-
-  // --- 2. 折线图 (模拟数据，用于展示趋势) ---
-  const lineDom = document.getElementById('lineChart')
-  if (lineDom) {
-    const lineChart = echarts.init(lineDom)
-    lineChart.setOption({
-      tooltip: { trigger: 'axis' },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: {
-        type: 'category',
-        boundaryGap: false,
-        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-      },
-      yAxis: { type: 'value' },
-      series: [
-        {
-          name: '营收',
-          type: 'line',
-          smooth: true,
-          stack: 'Total',
-          areaStyle: {},
-          emphasis: { focus: 'series' },
-          data: [120, 132, 101, 134, 90, 230, 210], // 模拟数据
-          itemStyle: { color: '#409EFF' },
-          areaStyle: { color: '#ecf5ff' }
-        }
-      ]
-    })
-  }
-  
-  // 监听窗口缩放，自动调整图表大小
-  window.addEventListener('resize', () => {
-      echarts.getInstanceByDom(document.getElementById('pieChart'))?.resize()
-      echarts.getInstanceByDom(document.getElementById('lineChart'))?.resize()
+  pieInstance = echarts.init(pieRef.value)
+  pieInstance.setOption({
+    color: CHART_COLORS,
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    legend: { bottom: 0, icon: 'circle' },
+    series: [
+      {
+        name: '会员分布',
+        type: 'pie',
+        radius: ['45%', '72%'],
+        avoidLabelOverlap: false,
+        itemStyle: {
+          borderRadius: 8,
+          borderColor: '#fff',
+          borderWidth: 2
+        },
+        label: {
+          show: true,
+          formatter: '{b}\n{d}%',
+          fontSize: 12
+        },
+        emphasis: {
+          label: { show: true, fontSize: 16, fontWeight: 'bold' }
+        },
+        data: report.value.vipData || []
+      }
+    ]
   })
+}
+
+const handleResize = () => {
+  pieInstance?.resize()
 }
 
 onMounted(() => {
   loadData()
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  pieInstance?.dispose()
+  pieInstance = null
 })
 </script>
 
 <style scoped>
 .dashboard-container {
-  padding: 10px;
-}
-.data-card {
-  display: flex;
-  align-items: center;
-  border: none;
-  border-radius: 8px;
-}
-/* Flex 布局修复卡片内容对齐 */
-.data-card :deep(.el-card__body) {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  padding: 20px !important;
+  padding: 4px;
 }
 
-.card-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
+.page-header {
+  margin-bottom: 20px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2d3d;
+}
+
+.page-subtitle {
+  color: #909399;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* KPI 卡 */
+.kpi-card {
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.kpi-card :deep(.el-card__body) {
+  padding: 0 !important;
+}
+
+.kpi-strip {
+  height: 4px;
+  width: 100%;
+}
+
+.kpi-body {
+  display: flex;
+  align-items: center;
+  padding: 22px 24px;
+}
+
+.kpi-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: #fff5ee;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30px;
-  margin-right: 20px;
+  margin-right: 16px;
+  flex-shrink: 0;
 }
 
-.card-content {
+.kpi-content {
   flex: 1;
+  min-width: 0;
 }
 
-.card-title {
-  font-size: 14px;
+.kpi-title {
+  font-size: 13px;
   color: #909399;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
-.card-num {
+.kpi-num {
   font-size: 24px;
-  font-weight: bold;
-  color: #303133;
+  font-weight: 700;
+  color: #1f2d3d;
+  line-height: 1.2;
+}
+
+/* 图表区 */
+.chart-row {
+  margin-top: 8px;
+}
+
+.chart-card {
+  border: none;
+  border-radius: 10px;
+  margin-bottom: 16px;
 }
 
 .chart-header {
-  font-weight: bold;
-  color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #1f2d3d;
+  font-size: 15px;
+}
+
+.chart-box {
+  height: 360px;
+  width: 100%;
+}
+
+.chart-skeleton {
+  height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.summary-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 4px;
+  border-bottom: 1px dashed #f0f0f0;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.summary-label {
+  color: #606266;
+  font-size: 14px;
+}
+
+.summary-value {
+  color: #ff7a2f;
+  font-size: 18px;
+  font-weight: 700;
 }
 </style>

@@ -155,7 +155,7 @@ import { ref, reactive } from 'vue'
 import { User, Lock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
-import request from '../utils/request'
+import { login, register } from '../api/auth'
 
 const router = useRouter()
 const activeTab = ref('login')
@@ -220,7 +220,7 @@ const handleLogin = async () => {
 
   loading.value = true
   try {
-    const res = await request.post('/auth/login', {
+    const res = await login({
       username: loginForm.username,
       password: loginForm.password
     })
@@ -245,7 +245,7 @@ const handleRegister = async () => {
 
   loading.value = true
   try {
-    await request.post('/auth/register', {
+    await register({
       username: registerForm.username,
       password: registerForm.password
     })

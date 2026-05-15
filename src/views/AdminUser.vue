@@ -1,64 +1,89 @@
 <template>
-  <div>
-    <div style="margin-bottom: 20px">
-      <h2 style="margin: 0">👤 用户管理</h2>
-      <p style="color: #999; font-size: 14px">管理员可以在此修改用户余额、会员等级，并查看会员有效期</p>
+  <div class="admin-user-page">
+    <div class="page-header">
+      <div>
+        <h2 class="page-title">
+          <el-icon><User /></el-icon>
+          <span>用户管理</span>
+        </h2>
+        <p class="page-subtitle">查看用户、调整角色、修改余额与会员等级</p>
+      </div>
     </div>
 
-    <el-card>
-      <div style="margin-bottom: 20px">
-         <el-input v-model="searchText" placeholder="输入用户名搜索" style="width: 200px; margin-right: 10px;" />
-         <el-button type="primary" @click="load">查询</el-button>
+    <el-card shadow="never" class="content-card">
+      <div class="toolbar">
+        <el-input
+          v-model="query.username"
+          placeholder="按用户名搜索"
+          clearable
+          :prefix-icon="Search"
+          class="search-input"
+          @keyup.enter="handleSearch"
+          @clear="handleSearch"
+        />
+        <el-button type="primary" @click="handleSearch">查询</el-button>
       </div>
 
-      <el-table :data="filteredData" stripe style="width: 100%">
-        <el-table-column prop="id" label="ID" width="60" />
-        <el-table-column prop="username" label="用户名" width="120" />
-        
-        <el-table-column prop="role" label="角色" width="100">
-            <template #default="scope">
-                <el-tag :type="scope.row.role === 'admin' ? 'danger' : 'primary'">
-                    {{ scope.row.role === 'admin' ? '管理员' : '用户' }}
-                </el-tag>
-            </template>
+      <el-table
+        v-loading="loading"
+        :data="tableData"
+        stripe
+        empty-text="暂无用户"
+        style="width: 100%"
+      >
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="username" label="用户名" width="140" />
+
+        <el-table-column label="角色" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.role === ROLE.ADMIN ? 'danger' : 'info'" effect="light">
+              {{ ROLE_LABEL[row.role] || row.role }}
+            </el-tag>
+          </template>
         </el-table-column>
 
-        <el-table-column prop="balance" label="余额" width="120">
-            <template #default="scope">
-                <span style="color: #f56c6c; font-weight: bold">￥{{ scope.row.balance }}</span>
-            </template>
+        <el-table-column label="余额" width="120">
+          <template #default="{ row }">
+            <span class="balance">￥{{ Number(row.balance || 0).toFixed(2) }}</span>
+          </template>
         </el-table-column>
 
         <el-table-column label="会员等级" width="120">
-            <template #default="scope">
-                <el-tag v-if="scope.row.vipType === 2" type="warning" effect="dark">年卡 VIP</el-tag>
-                <el-table v-else-if="scope.row.vipType === 1" type="success" effect="dark">月卡 VIP</el-table>
-                <el-tag v-else-if="scope.row.vipType === 1" type="primary">月卡 VIP</el-tag>
-                <el-tag v-else type="info">普通会员</el-tag>
-            </template>
+          <template #default="{ row }">
+            <el-tag :type="VIP_TAG_TYPE[row.vipType || 0]" effect="light">
+              {{ VIP_LABEL[row.vipType || 0] }}
+            </el-tag>
+          </template>
         </el-table-column>
 
-        <!-- ✨ 新增：VIP 到期时间列 -->
-        <el-table-column label="VIP 到期时间" width="200">
-            <template #default="scope">
-                <div v-if="scope.row.vipType > 0">
-                    <i class="el-icon-timer"></i>
-                    {{ formatTime(scope.row.vipExpireTime) }}
-                </div>
-                <div v-else style="color: #ccc">--</div>
+        <el-table-column label="VIP 到期" width="180">
+          <template #default="{ row }">
+            <template v-if="row.vipType > 0">
+              <div class="time-cell">
+                <el-icon><AlarmClock /></el-icon>
+                <span>{{ formatTime(row.vipExpireTime) }}</span>
+              </div>
             </template>
-        </el-table-column>
-        
-        <el-table-column prop="createTime" label="注册时间" width="180">
-             <template #default="scope">
-                 {{ formatTime(scope.row.createTime) }}
-             </template>
+            <span v-else class="muted">—</span>
+          </template>
         </el-table-column>
 
-        <el-table-column label="操作" min-width="180">
-          <template #default="scope">
-            <el-button size="small" type="primary" @click="handleEdit(scope.row)">编辑/充值</el-button>
-            <el-popconfirm title="确定删除该用户吗？" @confirm="handleDelete(scope.row.id)">
+        <el-table-column label="注册时间" width="180">
+          <template #default="{ row }">
+            <span class="muted">{{ formatTime(row.createTime) }}</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="操作" min-width="180" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" @click="handleEdit(row)">
+              编辑
+            </el-button>
+            <el-popconfirm
+              width="280"
+              title="将删除该用户的所有数据，不可恢复，确定吗？"
+              @confirm="handleDelete(row.id)"
+            >
               <template #reference>
                 <el-button size="small" type="danger">删除</el-button>
               </template>
@@ -66,94 +91,227 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="query.pageNum"
+          v-model:page-size="query.pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          background
+          layout="total, sizes, prev, pager, next, jumper"
+          @current-change="load"
+          @size-change="load"
+        />
+      </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" title="编辑用户信息" width="30%">
-      <el-form :model="form" label-width="80px">
+    <!-- 编辑弹窗 -->
+    <el-dialog v-model="dialogVisible" title="编辑用户信息" width="460px">
+      <el-form
+        :model="form"
+        :rules="rules"
+        ref="formRef"
+        label-width="90px"
+      >
         <el-form-item label="用户名">
           <el-input v-model="form.username" disabled />
         </el-form-item>
-        <el-form-item label="角色">
-           <el-select v-model="form.role">
-               <el-option label="普通用户" value="user" />
-               <el-option label="管理员" value="admin" />
-           </el-select>
+        <el-form-item label="角色" prop="role">
+          <el-select v-model="form.role" style="width: 100%">
+            <el-option label="普通用户" :value="ROLE.USER" />
+            <el-option label="管理员" :value="ROLE.ADMIN" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="余额">
-          <el-input-number v-model="form.balance" :precision="2" :step="100" />
+        <el-form-item label="余额" prop="balance">
+          <el-input-number
+            v-model="form.balance"
+            :precision="2"
+            :step="100"
+            :min="0"
+            style="width: 100%"
+          />
         </el-form-item>
-        <el-form-item label="会员等级">
-           <el-select v-model="form.vipType">
-               <el-option label="普通会员" :value="0" />
-               <el-option label="月卡 VIP" :value="1" />
-               <el-option label="年卡 VIP" :value="2" />
-           </el-select>
-           <div style="font-size: 12px; color: #999; line-height: 1.2; margin-top: 5px">
-               注意：在此处直接修改等级不会自动更新到期时间。<br>建议让用户在前台通过支付开通。
-           </div>
+        <el-form-item label="会员等级" prop="vipType">
+          <el-select v-model="form.vipType" style="width: 100%">
+            <el-option label="普通会员" :value="VIP_TYPE.NORMAL" />
+            <el-option label="月卡 VIP" :value="VIP_TYPE.MONTHLY" />
+            <el-option label="年卡 VIP" :value="VIP_TYPE.YEARLY" />
+          </el-select>
+          <div class="form-tip">
+            直接修改等级不会自动更新到期时间，建议让用户在前台支付开通。
+          </div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="save">保存</el-button>
-        </span>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="save">保存</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import request from '../utils/request'
+import { ref, reactive, onMounted } from 'vue'
+import { Search, User, AlarmClock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
+import { pageUsers, updateUser, deleteUser } from '../api/user'
+import { ROLE, ROLE_LABEL } from '../constants/role'
+import { VIP_TYPE, VIP_LABEL, VIP_TAG_TYPE } from '../constants/vip'
 
-const tableData = ref([])
-const searchText = ref('')
+const loading = ref(false)
+const saving = ref(false)
 const dialogVisible = ref(false)
+const tableData = ref([])
+const total = ref(0)
+const formRef = ref(null)
 const form = ref({})
 
+const query = reactive({
+  pageNum: 1,
+  pageSize: 10,
+  username: ''
+})
+
+const rules = {
+  role: [{ required: true, message: '请选择角色', trigger: 'change' }],
+  balance: [{ required: true, message: '请输入余额', trigger: 'blur' }],
+  vipType: [{ required: true, message: '请选择会员等级', trigger: 'change' }]
+}
+
 const load = async () => {
-  const res = await request.get('/user/list')
-  if (res.code === '200') {
-    tableData.value = res.data
+  loading.value = true
+  try {
+    const res = await pageUsers({
+      pageNum: query.pageNum,
+      pageSize: query.pageSize,
+      username: query.username || undefined
+    })
+    tableData.value = res.data?.records || []
+    total.value = res.data?.total || 0
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
   }
 }
 
-const filteredData = computed(() => {
-    if (!searchText.value) return tableData.value
-    return tableData.value.filter(u => u.username.includes(searchText.value))
-})
+const handleSearch = () => {
+  query.pageNum = 1
+  load()
+}
 
 const handleEdit = (row) => {
   form.value = JSON.parse(JSON.stringify(row))
   dialogVisible.value = true
+  setTimeout(() => formRef.value?.clearValidate(), 0)
 }
 
 const save = async () => {
   try {
-      // 这里的接口是 put /user，后端接收的是实体类 SysUser
-      // 所以即使 DTO 变了，这个管理员接口依然兼容
-      await request.put('/user', form.value)
-      ElMessage.success('更新成功')
-      dialogVisible.value = false
-      load() 
-  } catch(e) { console.error(e) }
+    await formRef.value.validate()
+  } catch {
+    return
+  }
+  saving.value = true
+  try {
+    await updateUser(form.value)
+    ElMessage.success('更新成功')
+    dialogVisible.value = false
+    load()
+  } catch (e) {
+    console.error(e)
+  } finally {
+    saving.value = false
+  }
 }
 
 const handleDelete = async (id) => {
   try {
-      await request.delete(`/user/${id}`)
-      ElMessage.success('删除成功')
-      load()
-  } catch(e) { console.error(e) }
+    await deleteUser(id)
+    ElMessage.success('删除成功')
+    load()
+  } catch (e) {
+    console.error(e)
+  }
 }
 
-const formatTime = (val) => {
-    if (!val) return ''
-    return dayjs(val).format('YYYY-MM-DD HH:mm')
-}
+const formatTime = (val) => (val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '—')
 
 onMounted(() => load())
 </script>
+
+<style scoped>
+.admin-user-page {
+  padding: 4px;
+}
+
+.page-header {
+  margin-bottom: 16px;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2d3d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.page-subtitle {
+  color: #909399;
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+
+.content-card {
+  border: none;
+  border-radius: 10px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.balance {
+  color: #ff7a2f;
+  font-weight: 700;
+}
+
+.time-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #606266;
+  font-size: 13px;
+}
+
+.muted {
+  color: #909399;
+  font-size: 13px;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 16px;
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+</style>

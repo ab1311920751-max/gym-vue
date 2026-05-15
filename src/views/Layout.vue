@@ -1,125 +1,142 @@
 <template>
   <div class="app-layout">
     <el-container class="main-container">
-      
-      <!-- 🟢 左侧侧边栏 -->
-      <el-aside width="210px" class="sidebar-container">
-         <!-- Logo 区域 -->
-         <div class="sidebar-logo">
-            <span class="logo-icon">🏋️</span>
-            <span class="logo-text">Gym Pro</span>
-         </div>
-        
-        <!-- 菜单区域 -->
+      <!-- 左侧侧边栏 -->
+      <el-aside width="220px" class="sidebar-container">
+        <div class="sidebar-logo">
+          <div class="logo-mark">
+            <span class="mark-emoji">🏋️</span>
+          </div>
+          <div class="logo-text">
+            <div class="logo-title">POWER FITNESS</div>
+            <div class="logo-sub">课程预约系统</div>
+          </div>
+        </div>
+
         <el-menu
           router
           :default-active="activeMenu"
-          background-color="#304156"
+          background-color="#1f2d3d"
           text-color="#bfcbd9"
-          active-text-color="#409EFF"
+          active-text-color="#ff7a2f"
           class="el-menu-vertical"
           :unique-opened="true"
         >
           <el-menu-item index="/home">
-             <el-icon><HomeFilled /></el-icon>
-             <span>系统首页</span>
+            <el-icon><HomeFilled /></el-icon>
+            <span>系统首页</span>
           </el-menu-item>
-          
+
           <el-menu-item index="/course">
-             <el-icon><Calendar /></el-icon>
-             <span>预约课程</span>
+            <el-icon><Calendar /></el-icon>
+            <span>预约课程</span>
           </el-menu-item>
-          
+
           <el-menu-item index="/my-booking">
-             <el-icon><List /></el-icon>
-             <span>我的订单</span>
+            <el-icon><List /></el-icon>
+            <span>我的订单</span>
           </el-menu-item>
 
           <el-menu-item index="/wallet">
-             <el-icon><Wallet /></el-icon>
-             <span>我的钱包</span>
+            <el-icon><Wallet /></el-icon>
+            <span>我的钱包</span>
           </el-menu-item>
 
-          <!-- 🛡️ 管理员可见区域 -->
-          <el-sub-menu index="admin" v-if="user.role === 'admin'">
+          <el-sub-menu index="admin" v-if="user.role === ROLE.ADMIN">
             <template #title>
-                <el-icon><Setting /></el-icon>
-                <span>系统管理</span>
+              <el-icon><Setting /></el-icon>
+              <span>系统管理</span>
             </template>
-            <el-menu-item index="/admin-user">用户管理</el-menu-item>
-            <el-menu-item index="/admin-course">课程管理</el-menu-item>
+            <el-menu-item index="/admin-user">
+              <el-icon><User /></el-icon>
+              <span>用户管理</span>
+            </el-menu-item>
+            <el-menu-item index="/admin-course">
+              <el-icon><Tickets /></el-icon>
+              <span>课程管理</span>
+            </el-menu-item>
           </el-sub-menu>
         </el-menu>
       </el-aside>
 
-      <!-- 🔵 右侧主体区域 -->
+      <!-- 右侧主体 -->
       <el-container>
-        <!-- 顶部 Header -->
         <el-header class="navbar">
-           <div class="navbar-left">
-               <!-- 欢迎语 / 身份标识 -->
-               <el-tag v-if="user.role === 'admin'" type="danger" effect="dark" size="small" class="role-badge">
-                 🔒 管理员模式
-               </el-tag>
-               <span v-else class="welcome-msg">
-                 👋 欢迎回来，<b>{{ user.username }}</b>
-               </span>
-           </div>
-           
-           <div class="navbar-right">
-               <!-- 用户下拉菜单 -->
-               <el-dropdown trigger="click" @command="handleCommand">
-                <div class="avatar-wrapper">
-                   <div class="user-avatar">
-                      {{ user.username ? user.username.charAt(0).toUpperCase() : 'U' }}
-                   </div>
-                   <span class="username">{{ user.username }}</span>
-                   <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          <div class="navbar-left">
+            <el-tag
+              v-if="user.role === ROLE.ADMIN"
+              type="danger"
+              effect="dark"
+              size="small"
+              class="role-badge"
+            >
+              <el-icon><Lock /></el-icon>
+              <span>管理员模式</span>
+            </el-tag>
+            <span v-else class="welcome-msg">
+              欢迎回来，<b>{{ user.username }}</b>
+            </span>
+          </div>
+
+          <div class="navbar-right">
+            <el-dropdown trigger="click" @command="handleCommand">
+              <div class="avatar-wrapper">
+                <div class="user-avatar">
+                  {{ user.username ? user.username.charAt(0).toUpperCase() : 'U' }}
                 </div>
-                <template #dropdown>
-                  <el-dropdown-menu class="user-dropdown">
-                    <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-                    <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-           </div>
+                <span class="username">{{ user.username }}</span>
+                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+              </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="profile">
+                    <el-icon><User /></el-icon>
+                    <span>个人中心</span>
+                  </el-dropdown-item>
+                  <el-dropdown-item divided command="logout">
+                    <el-icon><SwitchButton /></el-icon>
+                    <span>退出登录</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
         </el-header>
 
-        <!-- 主内容区 (包含路由视图) -->
         <el-main class="app-main">
-           <!-- 使用 transition 添加页面淡入淡出+位移动画 -->
-           <router-view v-slot="{ Component }">
-             <transition name="fade-transform" mode="out-in">
-               <component :is="Component" />
-             </transition>
-           </router-view>
+          <router-view v-slot="{ Component }">
+            <transition name="fade-transform" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
         </el-main>
       </el-container>
     </el-container>
-
-    <!-- ✨ 核心：引入 AI 悬浮组件 (位于最外层，确保不被遮挡) -->
-    <!-- 请确保 src/components/AiChat.vue 存在 -->
-    <AiChat />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-// 引入 Element Plus 图标 (如果没有自动引入插件，需要手动导入)
-import { HomeFilled, Calendar, List, Wallet, Setting, ArrowDown } from '@element-plus/icons-vue'
-// 引入 AI 组件
-import AiChat from '../components/AiChat.vue'
+import {
+  HomeFilled,
+  Calendar,
+  List,
+  Wallet,
+  Setting,
+  ArrowDown,
+  User,
+  Lock,
+  SwitchButton,
+  Tickets
+} from '@element-plus/icons-vue'
+import { ROLE } from '../constants/role'
 
 const router = useRouter()
 const route = useRoute()
 const user = ref({})
 
-// 当前激活的菜单项 (解决刷新后高亮丢失问题)
-const activeMenu = computed(() => {
-    return route.path
-})
+const activeMenu = computed(() => route.path)
 
 onMounted(() => {
   const userStr = localStorage.getItem('user')
@@ -129,18 +146,18 @@ onMounted(() => {
     try {
       user.value = JSON.parse(userStr)
     } catch (e) {
-      console.error("用户信息解析失败", e)
-      logout() // 数据损坏，强制退出
+      console.error('用户信息解析失败', e)
+      logout()
     }
   }
 })
 
 const handleCommand = (command) => {
-    if (command === 'logout') {
-        logout()
-    } else if (command === 'profile') {
-        router.push('/wallet')
-    }
+  if (command === 'logout') {
+    logout()
+  } else if (command === 'profile') {
+    router.push('/wallet')
+  }
 }
 
 const logout = () => {
@@ -151,70 +168,126 @@ const logout = () => {
 </script>
 
 <style scoped>
-/* 全屏布局容器 */
 .app-layout {
   height: 100vh;
   width: 100vw;
-  overflow: hidden; /* 防止出现双重滚动条 */
+  overflow: hidden;
 }
 
 .main-container {
   height: 100%;
 }
 
-/* 🟢 侧边栏样式 */
+/* 侧边栏 */
 .sidebar-container {
-  background-color: #304156;
+  background-color: #1f2d3d;
   height: 100%;
-  box-shadow: 2px 0 6px rgba(0, 21, 41, 0.35);
+  box-shadow: 2px 0 8px rgba(0, 21, 41, 0.25);
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-  transition: width 0.3s;
 }
 
 .sidebar-logo {
-  height: 60px;
-  line-height: 60px;
-  background: #2b2f3a;
-  text-align: center;
-  overflow: hidden;
+  height: 64px;
+  background: #18222f;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  cursor: pointer;
+}
+
+.logo-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #ff8c42 0%, #ff6b1a 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 107, 26, 0.4);
+  flex-shrink: 0;
 }
-.logo-icon { font-size: 24px; }
-.logo-text { 
-    color: #fff; 
-    font-weight: 600; 
-    font-size: 18px; 
-    font-family: Avenir, Helvetica Neue, Arial, sans-serif; 
-    white-space: nowrap;
+
+.mark-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.logo-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.logo-title {
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
+
+.logo-sub {
+  color: #8a98aa;
+  font-size: 11px;
+  margin-top: 2px;
+  letter-spacing: 0.5px;
 }
 
 .el-menu-vertical {
   border: none;
   width: 100%;
+  padding-top: 8px;
 }
 
-/* 🔵 顶部导航样式 */
+:deep(.el-menu-item) {
+  height: 48px;
+  line-height: 48px;
+  margin: 2px 8px;
+  border-radius: 6px;
+}
+
+:deep(.el-menu-item:hover) {
+  background-color: #18222f !important;
+}
+
+:deep(.el-menu-item.is-active) {
+  background-color: #2a3a4f !important;
+  color: #ff7a2f !important;
+}
+
+:deep(.el-sub-menu__title) {
+  height: 48px;
+  line-height: 48px;
+  margin: 2px 8px;
+  border-radius: 6px;
+}
+
+:deep(.el-sub-menu__title:hover) {
+  background-color: #18222f !important;
+}
+
+/* 顶部导航 */
 .navbar {
   height: 60px;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(0,21,41,.08);
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  z-index: 10; /* 确保阴影在内容之上 */
+  padding: 0 24px;
+  z-index: 10;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .role-badge {
-    margin-right: 5px;
-    font-weight: bold;
-    letter-spacing: 1px;
+  margin-right: 5px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .welcome-msg {
@@ -222,35 +295,44 @@ const logout = () => {
   font-size: 14px;
 }
 
+.welcome-msg b {
+  color: #ff7a2f;
+  font-weight: 600;
+}
+
 .navbar-right {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
 }
 
 .avatar-wrapper {
   display: flex;
   align-items: center;
   cursor: pointer;
-  padding: 5px;
-  border-radius: 4px;
-  transition: background 0.3s;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.2s;
 }
-.avatar-wrapper:hover { background: rgba(0,0,0,0.025); }
+
+.avatar-wrapper:hover {
+  background: #fff5ee;
+}
 
 .user-avatar {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #409EFF 0%, #3a8ee6 100%);
+  background: linear-gradient(135deg, #ff8c42 0%, #ff6b1a 100%);
   border-radius: 8px;
-  color: white;
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  margin-right: 8px;
-  font-size: 16px;
-  box-shadow: 0 2px 5px rgba(64, 158, 255, 0.4);
+  margin-right: 10px;
+  font-size: 15px;
+  box-shadow: 0 2px 6px rgba(255, 107, 26, 0.35);
 }
+
 .username {
   font-size: 14px;
   color: #333;
@@ -258,29 +340,28 @@ const logout = () => {
   margin-right: 5px;
 }
 
-/* 🟡 主内容区 */
+/* 主内容区 */
 .app-main {
-  background-color: #f0f2f5;
+  background-color: #f5f7fa;
   padding: 20px;
-  /* 减去 header 高度 */
-  height: calc(100vh - 60px); 
-  overflow-y: auto; /* 内容溢出时滚动 */
+  height: calc(100vh - 60px);
+  overflow-y: auto;
   position: relative;
 }
 
-/* 🪄 页面切换动画 (Fade Transform) */
+/* 切换动画 */
 .fade-transform-leave-active,
 .fade-transform-enter-active {
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .fade-transform-enter-from {
   opacity: 0;
-  transform: translateX(-20px);
+  transform: translateX(-12px);
 }
 
 .fade-transform-leave-to {
   opacity: 0;
-  transform: translateX(20px);
+  transform: translateX(12px);
 }
 </style>

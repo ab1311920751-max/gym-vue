@@ -5,6 +5,9 @@ import App from './App.vue'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 
+// 全局主题色覆盖
+import './styles/theme.css'
+
 // 引入路由
 import router from './router'
 
