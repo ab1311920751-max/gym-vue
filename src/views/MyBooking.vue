@@ -18,9 +18,9 @@
 
         <el-table-column prop="coach" label="教练" width="120" />
 
-        <el-table-column prop="startTime" label="上课时间" width="180">
+        <el-table-column prop="startTimeDisplay" label="上课时间" width="180">
             <template #default="scope">
-                <i class="el-icon-time"></i> {{ scope.row.startTime }}
+                <i class="el-icon-time"></i> {{ scope.row.startTimeDisplay }}
             </template>
         </el-table-column>
 
