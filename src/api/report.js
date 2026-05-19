@@ -1,3 +1,3 @@
 import request from '../utils/request'
 
-export const getDashboard = () => request.get('/report/dashboard')
+export const getDashboard = () => request.get('/report/console')

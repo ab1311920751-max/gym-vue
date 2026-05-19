@@ -141,18 +141,19 @@ const loadCourses = async () => {
 }
 
 const handleBook = async (row) => {
-  if (!localStorage.getItem('user')) {
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  if (!user.id) {
     ElMessage.error('请先登录')
     router.push('/login')
     return
   }
   row.loading = true
   try {
-    const res = await createBooking({ courseId: row.id })
+    const res = await createBooking({ userId: user.id, courseId: row.id })
     if (res.code === '200') {
       try {
         await ElMessageBox.confirm(
-          `抢课成功！订单号：${res.data}，请尽快支付。`,
+          `抢课成功！订单 ID：${res.data}，请尽快支付。`,
           '恭喜',
           { confirmButtonText: '去支付', cancelButtonText: '稍后', type: 'success' }
         )

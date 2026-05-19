@@ -162,7 +162,7 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
-import { getUserById, buyVip } from '../api/user'
+import { getMe, buyVip } from '../api/user'
 import { buildPayUrl, confirmRecharge } from '../api/alipay'
 import { VIP_TYPE, VIP_LABEL, VIP_TAG_TYPE, VIP_PRICE } from '../constants/vip'
 
@@ -203,10 +203,8 @@ const isExpiringSoon = (dateStr) => {
 }
 
 const loadUser = async () => {
-  const localUser = JSON.parse(localStorage.getItem('user') || '{}')
-  if (!localUser.id) return
   try {
-    const res = await getUserById(localUser.id)
+    const res = await getMe()
     if (res.code === '200') {
       user.value = res.data
       localStorage.setItem('user', JSON.stringify(res.data))

@@ -156,6 +156,7 @@ import { User, Lock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { login, register } from '../api/auth'
+import request from '../utils/request'
 
 const router = useRouter()
 const activeTab = ref('login')
@@ -174,6 +175,10 @@ const registerForm = reactive({
   username: '',
   password: '',
   confirmPassword: '',
+  nickname: '',
+  phone: '',
+  email: '',
+  gender: null,
   agree: false
 })
 
@@ -203,6 +208,12 @@ const registerRules = {
   ],
   confirmPassword: [
     { required: true, validator: validateConfirm, trigger: 'blur' }
+  ],
+  phone: [
+    { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
+  ],
+  email: [
+    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
   ]
 }
 
@@ -224,9 +235,19 @@ const handleLogin = async () => {
       username: loginForm.username,
       password: loginForm.password
     })
+    const token = res.data
+    localStorage.setItem('token', token)
     ElMessage.success('登录成功')
-    localStorage.setItem('token', res.data.token)
-    localStorage.setItem('user', JSON.stringify(res.data.user))
+
+    try {
+      const meRes = await request.get('/user/me')
+      if (meRes.code === '200') {
+        localStorage.setItem('user', JSON.stringify(meRes.data))
+      }
+    } catch (e) {
+      console.error('获取用户信息失败', e)
+    }
+
     router.push('/')
   } catch (e) {
     console.error(e)
@@ -247,7 +268,11 @@ const handleRegister = async () => {
   try {
     await register({
       username: registerForm.username,
-      password: registerForm.password
+      password: registerForm.password,
+      nickname: registerForm.nickname || undefined,
+      phone: registerForm.phone || undefined,
+      email: registerForm.email || undefined,
+      gender: registerForm.gender
     })
     ElMessage.success('注册成功，请登录')
 
@@ -256,6 +281,10 @@ const handleRegister = async () => {
     registerForm.username = ''
     registerForm.password = ''
     registerForm.confirmPassword = ''
+    registerForm.nickname = ''
+    registerForm.phone = ''
+    registerForm.email = ''
+    registerForm.gender = null
     registerForm.agree = false
     activeTab.value = 'login'
   } catch (e) {

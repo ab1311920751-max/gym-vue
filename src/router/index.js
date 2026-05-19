@@ -10,17 +10,26 @@ const routes = [
     children: [
       { path: 'home', name: 'Home', component: () => import('../views/Home.vue') },
       { path: 'course', name: 'Course', component: () => import('../views/Course.vue') },
+      { path: 'course/:id', name: 'CourseDetail', component: () => import('../views/CourseDetail.vue') },
+      { path: 'coach', name: 'CoachList', component: () => import('../views/CoachList.vue') },
+      { path: 'coach/:id', name: 'CoachDetail', component: () => import('../views/CourseDetail.vue') },
       { path: 'my-booking', name: 'MyBooking', component: () => import('../views/MyBooking.vue') },
       { path: 'wallet', name: 'Wallet', component: () => import('../views/Wallet.vue') },
+      { path: 'cart', name: 'Cart', component: () => import('../views/Cart.vue') },
+      { path: 'favorites', name: 'Favorites', component: () => import('../views/Favorites.vue') },
+      { path: 'ai-chat', name: 'AiChat', component: () => import('../views/AiChat.vue') },
       {
-      path: '/pay/success',
-      name: 'PaySuccess',
-      component: () => import('../views/PaySuccess.vue'),
-      meta: { title: '支付结果' }
-  },
+        path: '/pay/success',
+        name: 'PaySuccess',
+        component: () => import('../views/PaySuccess.vue'),
+        meta: { title: '支付结果' }
+      },
       // 管理页面
       { path: 'admin-course', name: 'AdminCourse', component: () => import('../views/AdminCourse.vue') },
-      { path: 'admin-user', name: 'AdminUser', component: () => import('../views/AdminUser.vue') }
+      { path: 'admin-user', name: 'AdminUser', component: () => import('../views/AdminUser.vue') },
+      { path: 'admin-booking', name: 'AdminBooking', component: () => import('../views/AdminBooking.vue') },
+      { path: 'admin-coach', name: 'AdminCoach', component: () => import('../views/AdminCoach.vue') },
+      { path: 'admin-knowledge', name: 'AdminKnowledge', component: () => import('../views/AdminKnowledge.vue') }
     ]
   },
   { path: '/login', name: 'Login', component: () => import('../views/Login.vue') }

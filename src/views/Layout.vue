@@ -32,14 +32,34 @@
             <span>预约课程</span>
           </el-menu-item>
 
+          <el-menu-item index="/coach">
+            <el-icon><UserFilled /></el-icon>
+            <span>教练团队</span>
+          </el-menu-item>
+
           <el-menu-item index="/my-booking">
             <el-icon><List /></el-icon>
             <span>我的订单</span>
           </el-menu-item>
 
+          <el-menu-item index="/cart">
+            <el-icon><ShoppingCart /></el-icon>
+            <span>购物车</span>
+          </el-menu-item>
+
           <el-menu-item index="/wallet">
             <el-icon><Wallet /></el-icon>
             <span>我的钱包</span>
+          </el-menu-item>
+
+          <el-menu-item index="/favorites">
+            <el-icon><Star /></el-icon>
+            <span>我的收藏</span>
+          </el-menu-item>
+
+          <el-menu-item index="/ai-chat">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>AI 助手</span>
           </el-menu-item>
 
           <el-sub-menu index="admin" v-if="user.role === ROLE.ADMIN">
@@ -54,6 +74,18 @@
             <el-menu-item index="/admin-course">
               <el-icon><Tickets /></el-icon>
               <span>课程管理</span>
+            </el-menu-item>
+            <el-menu-item index="/admin-booking">
+              <el-icon><List /></el-icon>
+              <span>订单管理</span>
+            </el-menu-item>
+            <el-menu-item index="/admin-coach">
+              <el-icon><UserFilled /></el-icon>
+              <span>教练管理</span>
+            </el-menu-item>
+            <el-menu-item index="/admin-knowledge">
+              <el-icon><Document /></el-icon>
+              <span>知识库</span>
             </el-menu-item>
           </el-sub-menu>
         </el-menu>
@@ -126,9 +158,14 @@ import {
   Setting,
   ArrowDown,
   User,
+  UserFilled,
   Lock,
   SwitchButton,
-  Tickets
+  Tickets,
+  ShoppingCart,
+  Star,
+  ChatDotRound,
+  Document
 } from '@element-plus/icons-vue'
 import { ROLE } from '../constants/role'
 

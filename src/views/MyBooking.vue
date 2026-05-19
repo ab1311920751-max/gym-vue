@@ -25,9 +25,9 @@
         empty-text="暂无订单"
         style="width: 100%"
       >
-        <el-table-column prop="bookingNo" label="订单号" width="200">
+        <el-table-column prop="id" label="订单 ID" width="100">
           <template #default="{ row }">
-            <span class="booking-no">{{ row.bookingNo }}</span>
+            <span class="booking-no">{{ row.id }}</span>
           </template>
         </el-table-column>
 
@@ -75,11 +75,8 @@
         <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <template v-if="row.status === BOOKING_STATUS.PENDING">
-              <el-button type="primary" size="small" @click="handlePay(row.id)">
-                余额支付
-              </el-button>
-              <el-button size="small" plain @click="handleAlipay(row.bookingNo)">
-                支付宝
+              <el-button size="small" plain @click="handleAlipay(row.id)">
+                支付宝支付
               </el-button>
               <el-button size="small" text @click="handleCancel(row.id)">
                 取消
@@ -105,7 +102,7 @@ import { ref, computed, onMounted } from 'vue'
 import { List, Clock } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
-import { listMyBookings, payBooking, cancelBooking } from '../api/booking'
+import { listMyBookings, cancelBooking } from '../api/booking'
 import { buildPayUrl } from '../api/alipay'
 import {
   BOOKING_STATUS,
@@ -144,19 +141,6 @@ const load = async () => {
     console.error(e)
   } finally {
     loading.value = false
-  }
-}
-
-const handlePay = async (id) => {
-  try {
-    const res = await payBooking(id)
-    if (res.code === '200') {
-      ElMessage.success('余额支付成功')
-      load()
-      window.dispatchEvent(new Event('refresh-user'))
-    }
-  } catch (e) {
-    console.error(e)
   }
 }
 

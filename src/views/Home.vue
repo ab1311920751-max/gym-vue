@@ -5,7 +5,6 @@
       <p class="page-subtitle">实时监控系统核心指标</p>
     </div>
 
-    <!-- KPI 卡片 -->
     <el-row :gutter="20" v-loading="loading">
       <el-col :xs="24" :sm="12" :md="6" v-for="(item, idx) in kpiList" :key="idx">
         <el-card shadow="hover" class="kpi-card">
@@ -23,28 +22,8 @@
       </el-col>
     </el-row>
 
-    <!-- 会员分布 + 业务概览 -->
     <el-row :gutter="20" class="chart-row">
-      <el-col :xs="24" :md="14">
-        <el-card shadow="never" class="chart-card">
-          <template #header>
-            <div class="chart-header">
-              <el-icon><PieChart /></el-icon>
-              <span>会员等级分布</span>
-            </div>
-          </template>
-          <div v-if="loading" class="chart-skeleton">
-            <el-skeleton :rows="6" animated />
-          </div>
-          <el-empty
-            v-else-if="!report.vipData || report.vipData.length === 0"
-            description="暂无会员数据"
-          />
-          <div v-else ref="pieRef" class="chart-box"></div>
-        </el-card>
-      </el-col>
-
-      <el-col :xs="24" :md="10">
+      <el-col :xs="24">
         <el-card shadow="never" class="chart-card">
           <template #header>
             <div class="chart-header">
@@ -52,7 +31,7 @@
               <span>业务概览</span>
             </div>
           </template>
-          <div class="summary-list">
+          <div class="summary-grid">
             <div class="summary-row" v-for="row in summaryRows" :key="row.label">
               <span class="summary-label">{{ row.label }}</span>
               <span class="summary-value">{{ row.value }}</span>
@@ -65,69 +44,28 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, nextTick, markRaw } from 'vue'
-import {
-  Money,
-  User,
-  Tickets,
-  Medal,
-  PieChart,
-  DataAnalysis
-} from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
+import { ref, computed, onMounted, markRaw } from 'vue'
+import { Money, User, Tickets, Medal, DataAnalysis } from '@element-plus/icons-vue'
 import { getDashboard } from '../api/report'
-import { CHART_COLORS } from '../constants/theme'
 
 const report = ref({})
 const loading = ref(true)
-const pieRef = ref(null)
-let pieInstance = null
 
 const kpiList = computed(() => [
-  {
-    title: '总营收',
-    value: `￥${Number(report.value.totalRevenue || 0).toLocaleString()}`,
-    icon: markRaw(Money),
-    color: '#ff7a2f'
-  },
-  {
-    title: '总用户数',
-    value: `${report.value.userCount || 0} 人`,
-    icon: markRaw(User),
-    color: '#409eff'
-  },
-  {
-    title: '订单总量',
-    value: `${report.value.orderCount || 0} 单`,
-    icon: markRaw(Tickets),
-    color: '#67c23a'
-  },
-  {
-    title: 'VIP 用户',
-    value: `${vipUserCount.value} 人`,
-    icon: markRaw(Medal),
-    color: '#e6a23c'
-  }
+  { title: '总营收',   value: `￥${Number(report.value.totalRevenue || 0).toLocaleString()}`, icon: markRaw(Money),   color: '#ff7a2f' },
+  { title: '总用户数', value: `${report.value.userCount || 0} 人`,                            icon: markRaw(User),    color: '#409eff' },
+  { title: '订单总量', value: `${report.value.bookingCount || 0} 单`,                          icon: markRaw(Tickets), color: '#67c23a' },
+  { title: '课程总数', value: `${report.value.courseCount || 0} 节`,                            icon: markRaw(Medal),   color: '#e6a23c' }
 ])
 
-const vipUserCount = computed(() => {
-  const list = report.value.vipData || []
-  return list
-    .filter((v) => v.name && v.name !== '普通会员')
-    .reduce((sum, v) => sum + (Number(v.value) || 0), 0)
-})
-
 const summaryRows = computed(() => {
-  const total = report.value.userCount || 0
-  const vipRate = total > 0 ? ((vipUserCount.value / total) * 100).toFixed(1) : '0.0'
-  const aov =
-    report.value.orderCount > 0
-      ? (Number(report.value.totalRevenue || 0) / report.value.orderCount).toFixed(2)
-      : '0.00'
+  const aov = report.value.bookingCount > 0
+    ? (Number(report.value.totalRevenue || 0) / report.value.bookingCount).toFixed(2)
+    : '0.00'
   return [
-    { label: 'VIP 渗透率', value: `${vipRate} %` },
-    { label: '客单价', value: `￥${aov}` },
-    { label: '累计订单', value: `${report.value.orderCount || 0} 单` },
+    { label: '课程总数', value: `${report.value.courseCount || 0} 节` },
+    { label: '客单价',   value: `￥${aov}` },
+    { label: '累计订单', value: `${report.value.bookingCount || 0} 单` },
     { label: '累计营收', value: `￥${Number(report.value.totalRevenue || 0).toLocaleString()}` }
   ]
 })
@@ -137,8 +75,6 @@ const loadData = async () => {
   try {
     const res = await getDashboard()
     report.value = res.data || {}
-    await nextTick()
-    renderPie()
   } catch (e) {
     console.error(e)
   } finally {
@@ -146,55 +82,7 @@ const loadData = async () => {
   }
 }
 
-const renderPie = () => {
-  if (!pieRef.value) return
-  if (pieInstance) {
-    pieInstance.dispose()
-  }
-  pieInstance = echarts.init(pieRef.value)
-  pieInstance.setOption({
-    color: CHART_COLORS,
-    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: { bottom: 0, icon: 'circle' },
-    series: [
-      {
-        name: '会员分布',
-        type: 'pie',
-        radius: ['45%', '72%'],
-        avoidLabelOverlap: false,
-        itemStyle: {
-          borderRadius: 8,
-          borderColor: '#fff',
-          borderWidth: 2
-        },
-        label: {
-          show: true,
-          formatter: '{b}\n{d}%',
-          fontSize: 12
-        },
-        emphasis: {
-          label: { show: true, fontSize: 16, fontWeight: 'bold' }
-        },
-        data: report.value.vipData || []
-      }
-    ]
-  })
-}
-
-const handleResize = () => {
-  pieInstance?.resize()
-}
-
-onMounted(() => {
-  loadData()
-  window.addEventListener('resize', handleResize)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize)
-  pieInstance?.dispose()
-  pieInstance = null
-})
+onMounted(() => { loadData() })
 </script>
 
 <style scoped>
@@ -219,7 +107,6 @@ onBeforeUnmount(() => {
   margin-top: 6px;
 }
 
-/* KPI 卡 */
 .kpi-card {
   border: none;
   border-radius: 10px;
@@ -273,7 +160,6 @@ onBeforeUnmount(() => {
   line-height: 1.2;
 }
 
-/* 图表区 */
 .chart-row {
   margin-top: 8px;
 }
@@ -293,33 +179,18 @@ onBeforeUnmount(() => {
   font-size: 15px;
 }
 
-.chart-box {
-  height: 360px;
-  width: 100%;
-}
-
-.chart-skeleton {
-  height: 360px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.summary-list {
-  display: flex;
-  flex-direction: column;
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18px 4px;
+  padding: 18px 20px;
   border-bottom: 1px dashed #f0f0f0;
-}
-
-.summary-row:last-child {
-  border-bottom: none;
 }
 
 .summary-label {

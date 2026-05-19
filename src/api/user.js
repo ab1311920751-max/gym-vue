@@ -1,6 +1,10 @@
 import request from '../utils/request'
 
-export const recharge = (data) => request.post('/user/recharge', data)
+export const getMe = () => request.get('/user/me')
+
+export const updateProfile = (data) => request.put('/user/profile', data)
+
+export const updatePassword = (data) => request.put('/user/password', data)
 
 export const buyVip = (data) => request.post('/user/buyVip', data)
 
